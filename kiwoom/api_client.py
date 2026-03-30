@@ -168,3 +168,11 @@ class KiwoomClient:
     def get_kospi_index(self):
         """업종현재가 (ka20001) — 코스피 지수"""
         return self.call("ka20001", {"mrkt_tp": "0", "inds_cd": "001"})
+
+    @staticmethod
+    def _parse_number(s):
+        """#23 숫자 파싱 유틸 (일관성)"""
+        try:
+            return float(str(s).strip().lstrip("0") or "0")
+        except (ValueError, TypeError):
+            return 0.0
