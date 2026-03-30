@@ -260,14 +260,14 @@ class Strike:
     def execute_buy(self, signal, available_cash, position_pct):
         """
         시장가 매수 실행.
-        available_cash: 사용 가능 현금
-        position_pct: 종목당 비중 (0.25 = 25%)
+        관찰 모드: 실주문 없이 가상 매수 기록 (슬리피지 가산)
         """
+        from config.trading_config import OBSERVATION_MODE, SLIPPAGE_BUY
+
         code = signal["code"]
         name = signal["name"]
         price = signal["cur_price"]
 
-        # 매수 금액 = 현금 × 종목 비중
         buy_amount = available_cash * position_pct
         qty = int(buy_amount / price)
 
@@ -275,8 +275,21 @@ class Strike:
             logger.warning(f"  ❌ {name}: 매수 수량 0 (현금 부족)")
             return None
 
-        logger.info(f"  📈 {name}: 시장가 매수 {qty}주 (약 {qty * price:,.0f}원)")
+        # 관찰 모드: 실주문 없이 가상 기록
+        if OBSERVATION_MODE:
+            sim_price = price * (1 + SLIPPAGE_BUY / 100)  # 슬리피지 +0.3%
+            logger.info(f"  👀 [관찰] {name}: 가상 매수 {qty}주 @ {sim_price:,.0f}원 (실제가 {price:,.0f} + 슬리피지 {SLIPPAGE_BUY}%)")
+            return {
+                "code": code,
+                "name": name,
+                "qty": qty,
+                "price": sim_price,
+                "order_id": f"OBS-{datetime.now().strftime('%H%M%S')}",
+                "signal": signal,
+                "observation": True,
+            }
 
+        logger.info(f"  📈 {name}: 시장가 매수 {qty}주 (약 {qty * price:,.0f}원)")
         result = self.client.buy_market(code, qty)
 
         if result.get("return_code") == 0:

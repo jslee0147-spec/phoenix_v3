@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config.log_config import setup_logger
 from config.api_config import PHOENIX_MODE
 from config import trading_config as tc
+from config.trading_config import OBSERVATION_MODE
 from kiwoom.api_client import KiwoomClient
 from kiwoom.token_manager import TokenManager
 from engines.radar import Radar
@@ -41,7 +42,8 @@ logger = setup_logger("main")
 def init_system():
     """시스템 초기화"""
     logger.info("=" * 50)
-    logger.info(f"🔥 PHOENIX v3.2 시작 (모드: {PHOENIX_MODE})")
+    mode_str = f"{PHOENIX_MODE}" + (" + 👀관찰모드" if OBSERVATION_MODE else "")
+    logger.info(f"🔥 PHOENIX v3.2 시작 (모드: {mode_str})")
 
     client = KiwoomClient()
     tm = TokenManager(client)
@@ -52,10 +54,11 @@ def init_system():
     deposit = client._parse_number(acct.get("entr", "0"))  # #23 일관성
     logger.info(f"✅ 계좌: {acct.get('acnt_nm')} | 예수금: {deposit:,.0f}원")
 
+    obs_msg = "\n👀 <b>관찰 모드 ON</b> — 실주문 없음, 가상매매만 기록" if OBSERVATION_MODE else ""
     send_telegram(
         f"🔥 <b>PHOENIX v3.2 시작</b>\n"
-        f"모드: {PHOENIX_MODE}\n"
-        f"예수금: {deposit:,.0f}원"
+        f"모드: {mode_str}\n"
+        f"예수금: {deposit:,.0f}원{obs_msg}"
     )
 
     radar = Radar(client)

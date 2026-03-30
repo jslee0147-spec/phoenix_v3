@@ -212,8 +212,35 @@ class Shield:
     # 매도 실행
     # ══════════════════════════════════════
     def _execute_sell(self, code, name, qty, reason, pnl_pct, pnl_amt, detail):
-        """시장가 매도 + 기록 + 알림"""
+        """시장가 매도 + 기록 + 알림. 관찰 모드: 실주문 없이 가상 기록."""
+        from config.trading_config import OBSERVATION_MODE, SLIPPAGE_SELL
+
         logger.warning(f"🔥 SHIELD 청산: {name} — {detail}")
+
+        # 관찰 모드: 실주문 없이 가상 청산
+        if OBSERVATION_MODE:
+            sim_pnl_pct = pnl_pct - SLIPPAGE_SELL  # 슬리피지 -0.2% 가산
+            order_id = f"OBS-S-{datetime.now().strftime('%H%M%S')}"
+            logger.info(f"  👀 [관찰] {name}: 가상 청산 PnL {sim_pnl_pct:+.1f}% (실제 {pnl_pct:+.1f}% - 슬리피지 {SLIPPAGE_SELL}%)")
+
+            append_trade({
+                "timestamp": datetime.now().isoformat(),
+                "stock_code": code, "stock_name": name,
+                "action": "sell(관찰)", "price": "", "qty": qty,
+                "pnl": pnl_amt, "pnl_pct": sim_pnl_pct,
+                "reason": reason, "order_id": order_id,
+            })
+            self.daily_pnl += pnl_amt
+            self.daily_trades += 1
+            self.high_prices.pop(code, None)
+            self.sell_targets.discard(code)
+            self.short_alert.discard(code)
+            self._remove_position(code)
+            return {
+                "code": code, "name": name,
+                "pnl_pct": sim_pnl_pct, "pnl_amt": pnl_amt,
+                "reason": reason, "order_id": order_id,
+            }
 
         result = self.client.sell_market(code, qty)
 

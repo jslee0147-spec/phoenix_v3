@@ -72,6 +72,12 @@ WEEKLY_LOSS_LIMIT = -100000      # 주간 -10만원
 MONTHLY_LOSS_LIMIT = -150000     # 월간 -15만원
 MAX_DAILY_TRADES = 5             # 일일 최대 거래 5회
 
+# ===== 관찰 모드 =====
+import os
+from dotenv import load_dotenv
+load_dotenv()
+OBSERVATION_MODE = os.getenv("OBSERVATION_MODE", "false").lower() == "true"
+
 # ===== 슬리피지 추정 (관찰 모드) =====
 SLIPPAGE_BUY = 0.3               # 매수 시 +0.3%
 SLIPPAGE_SELL = 0.2              # 매도 시 -0.2%
