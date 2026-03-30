@@ -32,6 +32,7 @@ URLS = {
     "revoke": "/oauth2/revoke",
     "acnt": "/api/dostk/acnt",   # 계좌/시세 조회 (api-id로 구분)
     "ordr": "/api/dostk/ordr",   # 주문 (api-id로 구분)
+    "sect": "/api/dostk/sect",   # 업종 조회 (ka20001 등)
 }
 
 # API 호출 제한

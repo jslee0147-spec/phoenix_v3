@@ -37,6 +37,17 @@ class KiwoomClient:
 
         try:
             resp = self._session.post(url, json=body, headers=headers, timeout=10)
+
+            # HTTP 상태코드 검사 (#7 성단 지적)
+            if resp.status_code == 401:
+                logger.error(f"API 인증 실패 [{api_id}]: 토큰 만료 또는 무효")
+                return {"return_code": -401, "return_msg": "인증 실패 (401)"}
+            if resp.status_code >= 500:
+                logger.error(f"API 서버 에러 [{api_id}]: HTTP {resp.status_code}")
+                return {"return_code": -500, "return_msg": f"서버 에러 ({resp.status_code})"}
+            if resp.status_code != 200:
+                logger.warning(f"API 비정상 응답 [{api_id}]: HTTP {resp.status_code}")
+
             data = resp.json()
 
             if data.get("return_code", -1) != 0:
@@ -156,4 +167,4 @@ class KiwoomClient:
 
     def get_kospi_index(self):
         """업종현재가 (ka20001) — 코스피 지수"""
-        return self.call("ka20001", {"upjong_cd": "0001"})
+        return self.call("ka20001", {"mrkt_tp": "0", "inds_cd": "001"})

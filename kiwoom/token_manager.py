@@ -4,6 +4,7 @@
 - 만료 5분 전 자동 갱신
 """
 import time
+import threading
 from datetime import datetime
 from config.log_config import setup_logger
 
@@ -14,16 +15,18 @@ class TokenManager:
         self._client = api_client
         self._token = None
         self._expires_at = 0  # Unix timestamp
+        self._lock = threading.Lock()  # STRIKE+SHIELD 동시 가동 시 경합 방지
 
     @property
     def token(self):
         """현재 유효한 토큰 반환. 만료 5분 전이면 자동 갱신."""
-        if self._token and time.time() < self._expires_at - 300:
+        with self._lock:
+            if self._token and time.time() < self._expires_at - 300:
+                return self._token
+            # 갱신 필요
+            logger.info("🔑 토큰 갱신 시작...")
+            self.refresh()
             return self._token
-        # 갱신 필요
-        logger.info("🔑 토큰 갱신 시작...")
-        self.refresh()
-        return self._token
 
     def refresh(self):
         """토큰 발급/갱신"""

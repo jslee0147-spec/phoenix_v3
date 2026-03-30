@@ -78,6 +78,16 @@ class Radar:
             code = stock["code"]
             name = stock.get("name", code)
 
+            # 시총 필터 (#4 성단 지적)
+            market_cap = stock.get("market_cap", 0)
+            if market_cap > 0 and (market_cap < tc.MIN_MARKET_CAP or market_cap > tc.MAX_MARKET_CAP):
+                continue
+
+            # 거래대금 필터 (#4 성단 지적)
+            trade_value = stock.get("trade_value", 0)
+            if trade_value > 0 and trade_value < tc.MIN_TRADE_VALUE:
+                continue
+
             chart = self.client.get_daily_chart(code)
             prices = self._extract_close_prices(chart)
 
@@ -146,6 +156,13 @@ class Radar:
             # 공매도 3일 연속 증가 아닐 것
             short = self.client.get_short_selling(code)
             if self._is_short_increasing(short):
+                continue
+
+            # 신용비율 체크 (#5 성단 지적)
+            credit = self.client.call("ka10033", {"stk_cd": code})
+            credit_ratio = self._parse_number(credit.get("crdt_rt", "0"))
+            if credit_ratio > tc.MAX_CREDIT_RATIO:
+                logger.info(f"  ❌ {name}: 신용비율 과열 {credit_ratio:.1f}%")
                 continue
 
             stock["foreign_consec"] = foreign_days
@@ -315,18 +332,25 @@ class Radar:
             return False
 
     def _load_recent_entries(self):
-        """최근 5거래일 내 진입했던 종목 코드"""
+        """최근 5거래일 내 진입했던 종목 코드 (#6 성단 지적: 날짜 필터 추가)"""
         trades_path = DATA_DIR / "trades.csv"
         if not trades_path.exists():
             return set()
         try:
             import csv
+            from datetime import timedelta
+            cutoff = datetime.now() - timedelta(days=7)  # 5거래일 ≈ 7일
             codes = set()
             with open(trades_path, "r", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
                 for row in reader:
                     if row.get("action") == "buy":
-                        codes.add(row.get("stock_code", ""))
+                        try:
+                            ts = datetime.fromisoformat(row.get("timestamp", ""))
+                            if ts >= cutoff:
+                                codes.add(row.get("stock_code", ""))
+                        except (ValueError, TypeError):
+                            pass
             return codes
         except Exception:
             return set()
