@@ -327,14 +327,14 @@ class Strike:
         return volumes
 
     def _calc_spread(self, orderbook, cur_price):
-        """호가 스프레드(%) 계산"""
+        """호가 스프레드(%) 계산. 조회 실패 시 999 반환 → 진입 차단 (#12 성단 지적)"""
         if not orderbook or orderbook.get("return_code") != 0:
-            return 0
+            return 999
 
         ask = self._parse_number(orderbook.get("ask_prc1", orderbook.get("askp1", "0")))
         bid = self._parse_number(orderbook.get("bid_prc1", orderbook.get("bidp1", "0")))
 
         if bid <= 0 or ask <= 0:
-            return 0
+            return 999
 
         return (ask - bid) / cur_price * 100
